@@ -44,15 +44,38 @@ jobs:
           username: ec2-user
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # PATH 설정 추가 (가장 확실한 방법)
+            export PATH=$PATH:/usr/local/bin:/usr/bin
+            
             cat <<EOF > .env
             SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
             SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
             SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
             EOF
             docker stop app || true && docker rm app || true
+            
+            # docker login 전에 AWS CLI가 제대로 설정되었는지 확인 (디버깅용)
+            /usr/local/bin/aws --version
+            
+            aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin 888042016323.dkr.ecr.ap-northeast-2.amazonaws.com
             docker pull 888042016323.dkr.ecr.ap-northeast-2.amazonaws.com/luckypaws:latest
             docker run -d \
               --name app \
               --env-file .env \
               -p 8080:8080 \
               888042016323.dkr.ecr.ap-northeast-2.amazonaws.com/luckypaws:latest
+#          script:
+#
+#            |
+#            cat <<EOF > .env
+#            SPRING_DATASOURCE_URL=${{ secrets.SPRING_DATASOURCE_URL }}
+#            SPRING_DATASOURCE_USERNAME=${{ secrets.SPRING_DATASOURCE_USERNAME }}
+#            SPRING_DATASOURCE_PASSWORD=${{ secrets.SPRING_DATASOURCE_PASSWORD }}
+#            EOF
+#            docker stop app || true && docker rm app || true
+#            docker pull 888042016323.dkr.ecr.ap-northeast-2.amazonaws.com/luckypaws:latest
+#            docker run -d \
+#              --name app \
+#              --env-file .env \
+#              -p 8080:8080 \
+#              888042016323.dkr.ecr.ap-northeast-2.amazonaws.com/luckypaws:latest
