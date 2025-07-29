@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="stylesheet" href="css/chat.css">
+    <meta charset="UTF-8">
+    <title>💬 나만의 웹 채팅 ver.3 (다중 채팅방)</title>
+</head>
+<body>
+<h2>💬 자바 메시지 채팅 ver.3 : WebSocket 이용 (다중 채팅방) </h2>
+
+<input type="text" id="serverIP" placeholder="10.240.111.191" value="localhost:50023"/>
+<br><br>
+<input type="text" id="nameInput" placeholder="닉네임을 입력하세요..." />
+<br>
+
+<input type="number" id="chatRoomIdInput" placeholder="채팅방 ID (예: 1)" value="1" min="1"/>
+<button onclick="connect()">채팅방 연결</button>
+<br>
+
+<p id="chatRoomIdDisplay">채팅방 ID: 연결 안됨</p>
+<br>
+
+<div id="chatBox"></div> <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." />
+<button onclick="sendMessage()">전송</button>
+
+<script>
+    let socket; // 전역 소켓 변수
+    let currentChatRoomId = null; // ⭐⭐ 현재 접속된 채팅방 ID를 저장할 변수 ⭐⭐
+
+    function connect() {
+        const serverIP = document.getElementById("serverIP").value;
+        const chatRoomIdInput = document.getElementById("chatRoomIdInput");
+        const selectedChatRoomId = chatRoomIdInput.value; // 입력된 채팅방 ID 가져오기
+
+        if (!serverIP) {
+            console.error("서버 IP를 입력해주세요.");
+            return;
+        }
+        if (!selectedChatRoomId || isNaN(selectedChatRoomId) || parseInt(selectedChatRoomId) <= 0) {
+            alert("유효한 채팅방 ID를 입력해주세요 (1 이상의 숫자).");
+            return;
+        }
+
+        // ⭐⭐ 이전 웹소켓 연결이 있다면 닫기 ⭐⭐
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+
+        currentChatRoomId = parseInt(selectedChatRoomId); // ⭐⭐ 현재 채팅방 ID 설정 ⭐⭐
+
+        // ⭐ 핵심 수정: WebSocket URL에 chatRoomId를 포함합니다. ⭐
+        // 예: ws://localhost:50023/ws/chat/1
+        socket = new WebSocket(`ws://${serverIP}/ws/chat/${currentChatRoomId}`);
+        setupWebSocketListeners();
+
+        // 연결 시 기존 메시지 불러오기 (연결 후 바로 최신 메시지를 확인하도록)
+        fetchAndDisplayOldMessages();
+
+        // UI 상태 업데이트
+        document.getElementById("chatRoomIdDisplay").textContent = `채팅방 ID: ${currentChatRoomId}`;
+        document.getElementById("serverIP").disabled = true;
+        document.getElementById("chatRoomIdInput").disabled = true;
+        // document.querySelector('button[onclick="connect()"]').disabled = true; // 연결 버튼 비활성화
+        document.getElementById("messageInput").disabled = false;
+        document.querySelector('button[onclick="sendMessage()"]').disabled = false;
+
+        console.log(`WebSocket 연결 시도: ws://${serverIP}/ws/chat/${currentChatRoomId}`);
+    }
+
+    function setupWebSocketListeners() {
+        if (!socket) return;
+
+        socket.onopen = () => {
+            console.log("✅ WebSocket 연결됨");
+            // 연결 시 기존 메시지 다시 불러오기 (선택 사항, connect()에서 이미 호출)
+            // fetchAndDisplayOldMessages();
+        };
+        socket.onerror = err => console.error("❌ 연결 실패", err);
+        socket.onclose = event => {
+            console.log("🔌 WebSocket 연결 해제됨:", event.code, event.reason);
+            // 연결 해제 시 UI 초기화
+            document.getElementById("chatRoomIdDisplay").textContent = `채팅방 ID: 연결 안됨`;
+            document.getElementById("serverIP").disabled = false;
+            document.getElementById("chatRoomIdInput").disabled = false;
+            // document.querySelector('button[onclick="connect()"]').disabled = false;
+            document.getElementById("messageInput").disabled = true;
+            document.querySelector('button[onclick="sendMessage()"]').disabled = true;
+            socket = null; // 소켓 객체 초기화
+        };
+
+        socket.onmessage = event => {
+            // 웹소켓을 통해 실시간으로 메시지를 받을 때의 처리 (1개 메시지)
+            const m = JSON.parse(event.data); // JSON 파싱
+
+            // ⭐⭐ 중요: 수신된 메시지의 chatRoomId가 현재 보고 있는 방과 일치하는지 확인 ⭐⭐
+            if (m.chatRoomId === currentChatRoomId) {
+                displayMessage(m); // 메시지 표시 함수 호출
+            } else {
+                console.log(`다른 채팅방(${m.chatRoomId}) 메시지 수신:`, m);
+                // 필요하다면 다른 채팅방 메시지에 대한 알림 등을 처리할 수 있습니다.
+            }
+        };
+    }
+
+    // 메시지를 HTML에 표시하는 공통 함수
+    function displayMessage(messageObj) {
+        const myName = document.getElementById("nameInput").value;
+        const cls = messageObj.sender === myName ? "me" : "you";
+        const icon = cls === "me" ? "😜" : "😎 ";
+        const time = messageObj.sentAt || new Date().toLocaleTimeString(); // sentAt이 없으면 현재 시간 사용
+        const chatBox = document.getElementById("chatBox");
+
+        chatBox.innerHTML += `<div class="message ${cls}">
+                  <span class="avatar">${icon}</span>
+                  <div class="bubble">
+                    <strong>${messageObj.sender}</strong>
+                    <div>${messageObj.message}</div> <small>${time}</small>
+                  </div>
+                </div>`;
+        scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const chatBox = document.getElementById('chatBox');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket이 연결되지 않았거나 준비되지 않았습니다. 먼저 '채팅방 연결' 버튼을 눌러주세요.");
+            return;
+        }
+        const msg = document.getElementById("messageInput").value;
+        const sender = document.getElementById('nameInput').value;
+
+        if (!msg.trim() || !sender.trim()) {
+            alert("메시지와 닉네임을 입력해주세요.");
+            return;
+        }
+
+        console.log("메시지: " + msg + "sender :" + sender);
+
+        // ⭐ 핵심 수정: JSON 데이터에 chatRoomId를 포함합니다. ⭐
+        socket.send(JSON.stringify({
+            message: msg,
+            sender: sender,
+            chatRoomId: currentChatRoomId // 현재 접속된 채팅방 ID를 사용
+        }));
+
+        document.getElementById('messageInput').value = '';
+        document.getElementById('messageInput').focus(); // 메시지 전송 후 입력 필드에 포커스
+    }
+
+    // ⭐⭐⭐ 핵심 수정: 기존 메시지 가져오기 (chatRoomId 기반) ⭐⭐⭐
+    async function fetchAndDisplayOldMessages() {
+        const serverIPValue = document.getElementById("serverIP").value;
+
+        if (!currentChatRoomId) {
+            console.warn("채팅방 ID가 설정되지 않았습니다. 기존 메시지를 불러올 수 없습니다.");
+            return;
+        }
+
+        // ⭐ REST API URL에 chatRoomId를 포함합니다. ⭐
+        const apiUrl = `http://${serverIPValue}/api/chat/room/${currentChatRoomId}/messages`;
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                // HTTP 오류 발생 시
+                const errorText = await response.text(); // 오류 메시지 받아오기
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+            const messages = await response.json(); // JSON 배열로 메시지들을 받음
+
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = ''; // 기존 메시지 모두 지우고 새로 채우기 (새로운 방 접속 시 유용)
+
+            if (messages.length === 0) {
+                chatBox.innerHTML = '<p style="text-align: center; color: #888;">아직 이 채팅방에 메시지가 없습니다.</p>';
+            } else {
+                messages.forEach(msgObj => {
+                    displayMessage(msgObj); // 각 메시지를 화면에 표시
+                });
+            }
+
+            console.log(`[${currentChatRoomId}번 방] 기존 메시지 로드 완료:`, messages);
+
+        } catch (error) {
+            console.error(`[${currentChatRoomId}번 방] 기존 메시지를 불러오는 데 실패했습니다:`, error);
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = '<p style="color: red; text-align: center;">메시지 로드 실패. 서버 연결 및 채팅방 ID를 확인하세요.</p>';
+        }
+    }
+
+    // 페이지 로드 시 초기 설정
+    window.onload = () => {
+        // 메시지 입력 필드 비활성화 (연결 전까지)
+        document.getElementById("messageInput").disabled = true;
+        document.querySelector('button[onclick="sendMessage()"]').disabled = true;
+
+        // 엔터 키 리스너 추가 (메시지 입력 필드에서)
+        document.getElementById('messageInput').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // 기본 Enter 동작(줄바꿈) 방지
+                sendMessage();
+            }
+        });
+
+        // ⭐⭐ 페이지 로드 시 기존 메시지를 자동으로 불러오지는 않습니다.
+        // 왜냐하면 어떤 채팅방에 접속할지 먼저 사용자가 선택/입력해야 하기 때문입니다.
+        // connect() 함수가 호출될 때 fetchAndDisplayOldMessages()를 호출하도록 변경했습니다.
+    };
+</script>
+</body>
+</html>
