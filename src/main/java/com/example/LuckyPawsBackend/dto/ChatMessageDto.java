@@ -18,6 +18,7 @@ public class ChatMessageDto {
     private String message;
     private String sender;
     private String sentAt;
+    private Long chatRoomId; // <-- 채팅방 ID 필드 추가 (클라이언트 -> 서버, 서버 -> 클라이언트 모두)
 
     public ChatMessageDto(String message, String sender) {
         this.message = message;

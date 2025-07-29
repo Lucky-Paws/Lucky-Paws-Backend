@@ -6,11 +6,7 @@ import com.example.LuckyPawsBackend.repository.ChatMessageRepository; // ChatMes
 
 import org.springframework.http.HttpStatus; // HTTP 상태 코드 사용을 위한 임포트
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter; // 날짜 포맷팅을 위한 임포트
@@ -33,7 +29,7 @@ public class ChatController {
     public ResponseEntity<ChatMessageDto> sendMessage(@RequestBody ChatMessageDto chatMessageDto) {
         // 1. DTO를 Entity로 변환하여 DB에 저장할 준비
         ChatMessage chatMessage = new ChatMessage();
-        chatMessage.setChatRoomId(1L); // TODO: 실제 채팅방 ID를 동적으로 받아오도록 수정 필요
+        chatMessage.setChatRoomId(chatMessageDto.getChatRoomId()); // <-- DTO에서 chatRoomId 가져와 설정
         chatMessage.setSender(chatMessageDto.getSender());
         chatMessage.setMessage(chatMessageDto.getMessage());
         chatMessage.setSentAt(LocalDateTime.now()); // 현재 시간으로 설정
@@ -49,32 +45,31 @@ public class ChatController {
         ChatMessageDto responseDto = new ChatMessageDto(
                 savedMessage.getSender(),
                 savedMessage.getMessage(),
-                savedMessage.getSentAt().format(formatter)
+                savedMessage.getSentAt().format(formatter),
+                savedMessage.getChatRoomId() // 응답에도 chatRoomId 포함
         );
 
         // 201 Created 상태 코드와 함께 저장된 메시지 DTO 반환
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
-    // 모든 채팅 메시지를 DB에서 조회하여 반환
-    @GetMapping("/all")
-    public ResponseEntity<List<ChatMessageDto>> getAllMessages() {
-        // 1. DB에서 모든 ChatMessage 엔티티를 조회
-        List<ChatMessage> messages = chatMessageRepository.findAll();
+    // 특정 채팅방의 메시지를 조회하는 엔드포인트
+// 예: GET /api/chat/room/1/messages  (채팅방 ID가 1인 방의 메시지)
+    @GetMapping("/room/{chatRoomId}/messages")
+    public ResponseEntity<List<ChatMessageDto>> getMessagesByRoom(@PathVariable Long chatRoomId) {
+        // ChatMessageRepository에 findByChatRoomIdOrderBySentAtAsc 같은 메서드를 추가해야 함
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomIdOrderBySentAtAsc(chatRoomId);
 
-        // 2. 조회된 ChatMessage 엔티티 리스트를 ChatMessageDto 리스트로 변환
-        // 이때 LocalDateTime을 클라이언트가 이해할 수 있는 String 형태로 포맷팅
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         List<ChatMessageDto> dtos = messages.stream()
                 .map(message -> new ChatMessageDto(
-                        message.getSender(), // ChatMessageDto 생성자 순서에 맞게 sender, message, sentAt
                         message.getMessage(),
-                        message.getSentAt().format(formatter)
+                        message.getSender(),
+                        message.getSentAt().format(formatter),
+                        message.getChatRoomId() // DTO에도 chatRoomId 추가
                 ))
                 .collect(Collectors.toList());
 
-        // 3. 200 OK 상태 코드와 함께 DTO 리스트 반환
-        // Spring Boot가 이 List<ChatMessageDto>를 자동으로 올바른 JSON 배열로 직렬화합니다.
         return ResponseEntity.ok(dtos);
     }
 }
