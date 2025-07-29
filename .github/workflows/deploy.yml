@@ -72,7 +72,7 @@ jobs:
             # 새로운 Docker 컨테이너 실행
             # -d: 백그라운드 실행, -p: 포트 매핑 (호스트포트:컨테이너포트), --name: 컨테이너 이름
             # 환경 변수 필요 시 -e 옵션 추가 (예: -e SPRING_PROFILES_ACTIVE=${{ env.SPRING_PROFILES_ACTIVE }})
-            docker run -d -p 50023:50023 --name ${{ env.ECR_REPOSITORY }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            docker run -d -p 8080:8080 --name ${{ env.ECR_REPOSITORY }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
             
             # Docker 컨테이너 로그 확인 (선택 사항, 디버깅 용)
             docker logs ${{ env.ECR_REPOSITORY }}
