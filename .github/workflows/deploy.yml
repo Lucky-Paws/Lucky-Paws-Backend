@@ -9,7 +9,7 @@ env:
   AWS_REGION: ap-northeast-2 # AWS 리전 (예: 서울 리전)
   ECR_REPOSITORY: luckypaws # ECR에 생성할 Docker 이미지 저장소 이름
   EC2_INSTANCE_IP: 146.56.99.100 # EC2 인스턴스의 퍼블릭 IP 주소
-  EC2_USERNAME: ubuntu # EC2 인스턴스의 사용자 이름 (Ubuntu AMI의 기본 사용자)
+  EC2_USERNAME: ec2-user # EC2 인스턴스의 사용자 이름 (Ubuntu AMI의 기본 사용자)
   # SPRING_PROFILES_ACTIVE: prod # 필요한 경우 Spring Profile 활성화 (application-prod.properties 사용 시)
 
 jobs:
