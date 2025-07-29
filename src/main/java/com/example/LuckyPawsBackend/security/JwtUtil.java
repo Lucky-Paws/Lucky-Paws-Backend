@@ -1,4 +1,4 @@
-package security;
+package com.example.LuckyPawsBackend.security;
 
 import io.jsonwebtoken  .Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
