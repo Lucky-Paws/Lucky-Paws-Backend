@@ -2,10 +2,8 @@
 <html lang="ko">
 <head>
     <link rel="stylesheet" href="css/chat.css">
-
     <meta charset="UTF-8">
     <title>💬 나만의 웹 채팅 ver.3</title>
-
 </head>
 <body>
 <h2>💬 자바 메시지 채팅 ver.3 : WebSocket 이용 </h2>
@@ -29,41 +27,46 @@
             console.error("서버 IP를 입력해주세요.");
             return;
         }
-        socket = new WebSocket(`ws://${serverIP}/ws/chat`); // Use template literal for dynamic IP
-        setupWebSocketListeners(); // Set up listeners after socket is created
+        // WebSocket URL은 백엔드 서버의 IP와 웹소켓 엔드포인트를 사용합니다.
+        // 현재 `/ws/chat`으로 설정되어 있다면 이대로 유지
+        socket = new WebSocket(`ws://${serverIP}/ws/chat`);
+        setupWebSocketListeners();
     }
 
-
-
     function setupWebSocketListeners() {
-        if (!socket) return; // Ensure socket exists before setting listeners
+        if (!socket) return;
 
         socket.onopen = () => console.log("?? WebSocket 연결됨");
         socket.onerror = err => console.error("? 연결 실패", err);
 
         socket.onmessage = event => {
-            const m = JSON.parse(event.data);
-            const myName = document.getElementById("nameInput").value;
-            const cls = m.sender === myName ? "me" : "you";
-            const icon = cls === "me" ? "😜" : "😎 ";
-            //❤😎😜
-            const time = new Date().toLocaleTimeString();
-            const chatBox = document.getElementById("chatBox");
-
-
-            chatBox.innerHTML += `<div class="message ${cls}">
-                      <span class="avatar">${icon}</span>
-                      <div class="bubble">
-                        <strong>${m.sender}</strong>
-                        <div>${m.text}</div>
-                        <small>${time}</small>
-                      </div>
-                    </div>`;
-
-            scrollToBottom(); // Use the existing function
+            // 웹소켓을 통해 실시간으로 메시지를 받을 때의 처리 (1개 메시지)
+            const m = JSON.parse(event.data); // JSON 파싱
+            displayMessage(m); // 메시지 표시 함수 호출
         };
-
     }
+
+    // 메시지를 HTML에 표시하는 공통 함수
+    function displayMessage(messageObj) {
+        const myName = document.getElementById("nameInput").value;
+        // DB에서 가져온 메시지 객체의 필드명과 일치시켜야 합니다.
+        // DB에서는 message, sender, sentAt 필드를 사용하므로 messageObj.message, messageObj.sender 사용
+        const cls = messageObj.sender === myName ? "me" : "you";
+        const icon = cls === "me" ? "😜" : "😎 ";
+        // DB의 sent_at 필드가 LocalDateTime이고, 서버에서 "yyyy-MM-dd HH:mm:ss" 형식의 String으로 포맷팅되어 온다고 가정
+        const time = messageObj.sentAt || new Date().toLocaleTimeString(); // sentAt이 없으면 현재 시간 사용
+        const chatBox = document.getElementById("chatBox");
+
+        chatBox.innerHTML += `<div class="message ${cls}">
+                  <span class="avatar">${icon}</span>
+                  <div class="bubble">
+                    <strong>${messageObj.sender}</strong>
+                    <div>${messageObj.message}</div> <small>${time}</small>
+                  </div>
+                </div>`;
+        scrollToBottom();
+    }
+
 
     function scrollToBottom() {
         const chatBox = document.getElementById('chatBox');
@@ -77,28 +80,59 @@
         }
         const msg = document.getElementById("messageInput").value;
         const sender = document.getElementById('nameInput').value;
-        if (msg.trim() === "") { // Prevent sending empty messages
+        if (msg.trim() === "") {
             return;
         }
         console.log("메시지: " +msg + "sender :" + sender);
-        socket.send(JSON.stringify({text : msg , sender : sender}) ); // 메시지 전송
+        // 서버 DTO가 message 필드를 기대하므로, 클라이언트도 message 필드로 보냅니다.
+        socket.send(JSON.stringify({message : msg , sender : sender}) );
 
         document.getElementById('messageInput').value = '';
     }
 
+    // ⭐⭐⭐ 핵심 추가 로직: 페이지 로드 시 기존 메시지 가져오기 ⭐⭐⭐
+    async function fetchAndDisplayOldMessages() {
+        const serverIPValue = document.getElementById("serverIP").value;
+        // REST API URL은 백엔드 서버의 IP와 API 엔드포인트를 사용합니다.
+        const apiUrl = `http://${serverIPValue}/api/chat/all`;
+
+        try {
+            const response = await fetch(apiUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const messages = await response.json(); // JSON 배열로 메시지들을 받음
+
+            const chatBox = document.getElementById("chatBox");
+            chatBox.innerHTML = ''; // 기존 "채팅방" 텍스트를 지우고 시작
+
+            messages.forEach(msgObj => {
+                displayMessage(msgObj); // 각 메시지를 화면에 표시
+            });
+
+            console.log("기존 메시지 로드 완료:", messages);
+
+        } catch (error) {
+            console.error("기존 메시지를 불러오는 데 실패했습니다:", error);
+        }
+    }
 
     // 페이지 열리면 자동 로딩.
     window.onload = () => {
-        document.getElementById('messageInput').addEventListener('keydown', function(event) {  //키리스너 추가
+        // 기존 메시지를 먼저 불러온 후, 웹소켓 연결 시도
+        fetchAndDisplayOldMessages();
+
+        // 엔터 키 리스너 추가
+        document.getElementById('messageInput').addEventListener('keydown', function(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 sendMessage();
             }
         });
+
+        // ⭐ 웹소켓 자동 연결 (선택 사항)
+        // connect(); // 페이지 로드 시 웹소켓을 자동으로 연결하려면 이 줄의 주석을 해제
     };
-
-
-
 </script>
 </body>
 </html>

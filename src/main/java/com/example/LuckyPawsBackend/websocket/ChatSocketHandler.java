@@ -48,12 +48,12 @@ public class ChatSocketHandler extends TextWebSocketHandler {
         try {
             //1. objectmapper로 JSON => dto로
             ChatMessageDto receivedMessageDto = objectMapper.readValue(payload, ChatMessageDto.class);
-            System.out.println(">> DTO 파싱 성공: 발신자=" + receivedMessageDto.getSender() + ", 메시지=" + receivedMessageDto.getText());
+            System.out.println(">> DTO 파싱 성공: 발신자=" + receivedMessageDto.getSender() + ", 메시지=" + receivedMessageDto.getMessage());
 
             // 2. DTO를 엔티티로 변환하여 DB에 저장
             ChatMessage chatMessageEntity = new ChatMessage();
             chatMessageEntity.setSender(receivedMessageDto.getSender());
-            chatMessageEntity.setMessage(receivedMessageDto.getText());
+            chatMessageEntity.setMessage(receivedMessageDto.getMessage());
             chatMessageEntity.setSentAt(LocalDateTime.now()); // 현재 시간으로 설정
 
             chatMessageEntity.setChatRoomId(1L); // TODO: 실제 채팅방 ID로 설정해야 함
