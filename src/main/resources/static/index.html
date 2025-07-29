@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <link rel="stylesheet" href="css/chat.css">
+
+    <meta charset="UTF-8">
+    <title>💬 나만의 웹 채팅 ver.3</title>
+
+</head>
+<body>
+<h2>💬 자바 메시지 채팅 ver.3 : WebSocket 이용 </h2>
+
+<input type="text" id="serverIP" placeholder="10.240.111.191" value="10.240.111.191:50023"/> <button onclick="connect()">연결</button>
+<br><br>
+<input type="text" id="nameInput" placeholder="닉네임을 입력하세요..." />
+<br><br>
+
+<div id="chatBox"> 채팅방 </div>
+<input type="text" id="messageInput" placeholder="메시지를 입력하세요..." />
+<button onclick="sendMessage()">전송</button>
+
+<script>
+
+    let socket; // Declare socket globally so it's accessible everywhere
+
+    function connect() {
+        const serverIP = document.getElementById("serverIP").value;
+        if (!serverIP) {
+            console.error("서버 IP를 입력해주세요.");
+            return;
+        }
+        socket = new WebSocket(`ws://${serverIP}/ws/chat`); // Use template literal for dynamic IP
+        setupWebSocketListeners(); // Set up listeners after socket is created
+    }
+
+
+
+    function setupWebSocketListeners() {
+        if (!socket) return; // Ensure socket exists before setting listeners
+
+        socket.onopen = () => console.log("?? WebSocket 연결됨");
+        socket.onerror = err => console.error("? 연결 실패", err);
+
+        socket.onmessage = event => {
+            const m = JSON.parse(event.data);
+            const myName = document.getElementById("nameInput").value;
+            const cls = m.sender === myName ? "me" : "you";
+            const icon = cls === "me" ? "😜" : "😎 ";
+            //❤😎😜
+            const time = new Date().toLocaleTimeString();
+            const chatBox = document.getElementById("chatBox");
+
+
+            chatBox.innerHTML += `<div class="message ${cls}">
+                      <span class="avatar">${icon}</span>
+                      <div class="bubble">
+                        <strong>${m.sender}</strong>
+                        <div>${m.text}</div>
+                        <small>${time}</small>
+                      </div>
+                    </div>`;
+
+            scrollToBottom(); // Use the existing function
+        };
+
+    }
+
+    function scrollToBottom() {
+        const chatBox = document.getElementById('chatBox');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            console.warn("WebSocket이 연결되지 않았거나 준비되지 않았습니다.");
+            return;
+        }
+        const msg = document.getElementById("messageInput").value;
+        const sender = document.getElementById('nameInput').value;
+        if (msg.trim() === "") { // Prevent sending empty messages
+            return;
+        }
+        console.log("메시지: " +msg + "sender :" + sender);
+        socket.send(JSON.stringify({text : msg , sender : sender}) ); // 메시지 전송
+
+        document.getElementById('messageInput').value = '';
+    }
+
+
+    // 페이지 열리면 자동 로딩.
+    window.onload = () => {
+        document.getElementById('messageInput').addEventListener('keydown', function(event) {  //키리스너 추가
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                sendMessage();
+            }
+        });
+    };
+
+
+
+</script>
+</body>
+</html>

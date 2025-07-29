@@ -1,0 +1,31 @@
+#chatBox {
+    border: 10px solid #aaa;
+    padding: 10px;
+    width: 400px;
+    height: 200px;
+    overflow-y: scroll;
+    background: #fff;
+}
+
+
+.message {
+    padding: 5px 10px;
+    margin: 5px;
+    max-width: 70%;
+    border-radius: 10px;
+    font-family: sans-serif;
+}
+
+.me {
+    background-color: #dcf8c6;
+    margin-left: auto;
+    text-align: right;
+    border-radius: 10px 0 10px 10px;
+}
+
+.you {
+    background-color: #eee;
+    margin-right: auto;
+    text-align: left;
+    border-radius: 0 10px 10px 10px;
+}
