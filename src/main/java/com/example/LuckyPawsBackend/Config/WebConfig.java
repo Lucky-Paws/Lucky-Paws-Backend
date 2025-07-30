@@ -14,10 +14,13 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                        .allowedOrigins("*") // 모든 도메인 허용 (개발용)
+                        .allowedOrigins("http://localhost:3000", "http://43.200.175.153:8080") // 프론트 주소
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*");
+                        .allowedHeaders("*")
+                        .allowCredentials(true); // 쿠키 등 허용 시 true
             }
         };
     }
+
+
 }
