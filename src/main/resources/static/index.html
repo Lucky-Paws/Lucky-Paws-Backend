@@ -27,6 +27,7 @@
 <script>
     let socket;
     let currentChatRoomId;
+    let userName = "시혜"; // 예시로 사용자 이름 미리 지정
 
     function getWebSocketProtocol() {
         return location.protocol === "https:" ? "wss" : "ws";
@@ -51,7 +52,13 @@
         };
 
         socket.onmessage = (event) => {
-            log("📩 받은 메시지: " + event.data);
+            try {
+                const msg = JSON.parse(event.data);
+                log(`📩 받은 메시지: ${msg.sender}: ${msg.content}`);
+            } catch (e) {
+                // JSON 파싱 실패 시 그냥 메시지 그대로 출력
+                log("📩 받은 메시지 (파싱 실패): " + event.data);
+            }
         };
 
         socket.onerror = (event) => {
@@ -66,10 +73,15 @@
 
     function sendMessage() {
         const input = document.getElementById("messageInput");
-        const message = input.value;
-        if (message && socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(message);
-            log("📤 보낸 메시지: " + message);
+        const content = input.value;
+        if (content && socket && socket.readyState === WebSocket.OPEN) {
+            // JSON 형식으로 서버에 메시지 전송
+            const messageObj = {
+                sender: userName,
+                content: content
+            };
+            socket.send(JSON.stringify(messageObj));
+            log("📤 보낸 메시지: " + content);
             input.value = "";
         }
     }
