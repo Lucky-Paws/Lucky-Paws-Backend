@@ -1,11 +1,13 @@
 package com.example.LuckyPawsBackend.dto.response;
 
 import com.example.LuckyPawsBackend.entity.Post;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
 
 @Getter
+@AllArgsConstructor
 public class PostListResponseDto {
     private Long id;
     private String title;
