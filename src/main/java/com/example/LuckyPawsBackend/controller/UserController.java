@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users") // 사용자 관련 API의 기본 경로
@@ -53,7 +55,8 @@ public class UserController {
             System.err.println("인증된 사용자(" + loggedInUserIdentifier + ")의 정보를 DB에서 찾을 수 없습니다.");
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build(); // 404 Not Found 또는 500 Internal Server Error
         }
-    }
+        }
+
 
     // ... (다른 메서드들) ...
 }
