@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -48,18 +49,22 @@ public class PostService {
 
     /** 게시글 목록 조회 (카테고리 + 페이징) */
     public List<PostListResponseDto> getPosts(String category, int page) {
-        Pageable pageable = PageRequest.of(page, 10);
-        Page<Post> posts;
+        ArrayList<PostListResponseDto> responses = new ArrayList<>();
 
-        if (category != null && !category.isEmpty()) {
-            posts = postRepository.findByCategory(category, pageable);
-        } else {
-            posts = postRepository.findAll(pageable);
+        ArrayList<Post> posts = postRepository.findAll();
+        for (Post post : posts) {
+            responses.add(new PostListResponseDto(
+                    post.getId(),
+                    post.getTitle(),
+                    post.getCategory(),
+                    post.getUser().getNickname(),
+                    post.getLikes(),
+                    post.getScraps(),
+                    post.getCreatedAt()
+            ));
         }
 
-        return posts.stream()
-                .map(PostListResponseDto::new)
-                .toList();
+        return responses;
     }
 
     /** 게시글 단건 조회 */
